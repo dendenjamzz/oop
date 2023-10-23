@@ -1,0 +1,277 @@
+
+//commonly used for operations in C++
+#include <iostream>
+
+//used to manange dynamic arrays
+#include <vector>
+
+//for strings
+#include <string>
+
+//provides classes for file input and output
+#include <fstream>
+
+//for time and date informations
+#include <ctime>
+
+//mostly memory management and random nr generating
+#include <cstdlib>
+
+// For exception handling
+#include <stdexcept> 
+
+
+class Location {
+private:
+
+    // Private member to store the maximum number of seats.
+    int maxSeats;
+    // Private member to store the number of rows.
+    int numRows;
+    // Private member to store information about different zones.
+    std::string zones;
+    // Private member to store the number of seats in each row.
+    std::vector<int> seatsPerRow;
+
+public:
+
+    // Constructor: Initialize the Location object with provided values.
+    Location(int maxSeats, int numRows, const std::string& zones, const std::vector<int>& seatsPerRow) :
+        maxSeats(maxSeats), numRows(numRows), zones(zones), seatsPerRow(seatsPerRow) {}
+
+    // Accessor methods and validation logic
+    // Friend function for output.
+    friend std::ostream& operator<<(std::ostream& os, const Location& location) {
+        
+        // Output the maximum seats.
+        os << "Max Seats: " << location.maxSeats << "\n";
+        // Output the number of rows.
+        os << "Number of Rows: " << location.numRows << "\n";
+        // Output information about zones.
+        os << "Zones: " << location.zones << "\n";
+        os << "Seats per Row: ";
+        for (int seats : location.seatsPerRow) {
+            
+            // Output the number of seats in each row.
+            os << seats << " ";
+        }
+
+        // Newline for formatting.
+        os << "\n";
+        return os;
+    }
+};
+
+class Event {
+private:
+
+    // Private member to store the date of the event.
+    std::string date;
+    // Private member to store the time of the event.
+    std::string time;
+    // Private member to store the name of the event.
+    std::string name;         
+
+public:
+
+    // Constructor: Initialize the Event object with provided values.
+    Event(const std::string& date, const std::string& time, const std::string& name) :
+        date(date), time(time), name(name) {}
+
+
+    // Accessor methods and validation logic can be added here 
+    // Friend function for output.
+    friend std::ostream& operator<<(std::ostream& os, const Event& event) {
+        
+        // Output the date of the event.
+        os << "Date: " << event.date << "\n";
+        // Output the time of the event.
+        os << "Time: " << event.time << "\n";  
+        // Output the name of the event.
+        os << "Name: " << event.name << "\n";  
+
+        return os;
+    }
+};
+
+class Ticket {
+private:
+
+    // Private member to store the unique ID of the ticket.
+    int uniqueID;               
+    // Private member to store a pointer to the associated event.
+    Event* event;               
+    // Private member to store a pointer to the associated location.
+    Location* location;         
+    // Private member to store the type of the ticket.
+    std::string ticketType;     
+
+
+    // Static counter for generating unique IDs
+    static int uniqueIDCounter;// Static member to keep track of the next unique ID.
+
+
+public:
+
+    // Constructor: Initialize the Ticket object with provided values.
+    Ticket(Event* event, Location* location, const std::string& ticketType) :
+        event(event), location(location), ticketType(ticketType) {
+        // Generate a unique ID for the ticket.
+        uniqueID = generateUniqueID();
+    }
+
+    // Accessor methods and validation logic
+
+    // Generate a unique ID
+    static int generateUniqueID() {
+        
+        // Increment and return the static counter to generate unique IDs.
+        return ++uniqueIDCounter;
+    }
+
+    // Validate the ticket ID
+    static bool validateTicketID(int ticketID) {
+        // Validation logic 
+        // Implement validation logic to check the ticket ID's validity.
+    }
+
+    // Friend function for output.
+    friend std::ostream& operator<<(std::ostream& os, const Ticket& ticket) {
+        
+        // Output the unique ID of the ticket.
+        os << "Unique ID: " << ticket.uniqueID << "\n";       
+        // Output the type of the ticket.
+        os << "Ticket Type: " << ticket.ticketType << "\n";   
+        // Output the associated event's details.
+        os << "Event Details:\n" << *(ticket.event);          
+        // Output the associated location's details.
+        os << "Location Details:\n" << *(ticket.location);    
+        return os;
+    }
+};
+
+//initializing the static member uniqueIDCounter of the Ticket class to the value 0
+int Ticket::uniqueIDCounter = 0;
+
+class TicketManager {
+private:
+
+    // List to store issued tickets
+    std::vector<Ticket*> issuedTickets;
+
+    // Name of the data file for persisting ticket data
+    std::string dataFileName;
+
+public:
+
+    // Constructor: Initialize TicketManager with the data file name
+    TicketManager(const std::string& fileName) : dataFileName(fileName) {
+
+        // Load existing tickets from the data file
+        loadTickets();
+    }
+
+    // Load tickets from a binary file
+    void loadTickets() {
+        std::ifstream file(dataFileName, std::ios::binary | std::ios::in);
+        if (file) {
+            while (file.good()) { 
+                
+                // Change condition to use file's state
+                Ticket* ticket = new Ticket(nullptr, nullptr, "");
+                file.read(reinterpret_cast<char*>(ticket), sizeof(Ticket));
+                if (file.gcount() == sizeof(Ticket)) {
+                    issuedTickets.push_back(ticket);
+                }
+                else {
+
+                    // Free the memory if reading failed
+                    delete ticket; 
+                }
+            }
+            file.close();
+
+        }
+        else {
+            throw std::runtime_error("Failed to load tickets from file.");
+        }
+
+    }
+
+    // Save issued tickets to a binary file
+    void saveTickets() {
+        std::ofstream file(dataFileName, std::ios::binary | std::ios::out);
+        if (file) {
+            for (Ticket* ticket : issuedTickets) {
+                file.write(reinterpret_cast<const char*>(ticket), sizeof(Ticket));
+            }
+            file.close();
+        }
+        else {
+            throw std::runtime_error("Failed to save tickets to file.");
+        }
+    }
+
+    // Issue a new ticket and add it to the list
+    void issueTicket(Event* event, Location* location, const std::string& ticketType) {
+        if (event == nullptr || location == nullptr) {
+            throw std::invalid_argument("Invalid event or location data.");
+        }
+
+        Ticket* ticket = new Ticket(event, location, ticketType);
+        issuedTickets.push_back(ticket);
+
+        // Save the updated list of tickets to the data file
+        saveTickets();
+    }
+
+    // Display all issued tickets
+    void displayAllTickets() {
+        for (Ticket* ticket : issuedTickets) {
+            if (ticket != nullptr) { 
+                
+                // Check for nullptr before displaying
+                std::cout << *ticket << "\n";
+            }
+        }
+    }
+
+    // Destructor: Free memory for issued tickets
+    ~TicketManager() {
+        for (Ticket* ticket : issuedTickets) {
+            delete ticket;
+        }
+        issuedTickets.clear();
+    }
+};
+
+int main(int argc, char* argv[]) {
+    std::string dataFileName = "tickets.dat";
+    if (argc > 1) {
+
+        // Use a command-line argument as the data file name if provided
+        dataFileName = argv[1];
+    }
+
+    try {
+        TicketManager ticketManager(dataFileName);
+        // Create a TicketManager instance
+
+        while (true) {
+
+            // Menu and user interaction as before
+            // Menu allows issuing new tickets and displaying issued tickets
+        }
+    }
+    catch (const std::exception& e) {
+
+        // Display error message to the standard error stream
+        std::cerr << "Error: " << e.what() << std::endl;
+
+        // Indicate an error has occurred by returning a non-zero exit code
+        return 1; 
+    }
+
+    // Return 0 to indicate successful program execution
+    return 0;
+}
